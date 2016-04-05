@@ -9,6 +9,14 @@
     <p>
       Well there isn't much to see quite yet
     </p>
-    <a href="/login">Login</a>
+    {{if .Exists}}
+      <form action="/logout" method="POST">
+        <input type="hidden" name="_method" value="DELETE">
+        <input type="submit" value="Logout">
+      </form>
+      <!-- <a href="/logout">Logout</a> -->
+    {{else}}
+      <a href="/login">Login</a>
+    {{end}}
   </body>
 </html>

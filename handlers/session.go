@@ -24,6 +24,22 @@ func (h *Handler) NewSessionHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u.String(), http.StatusFound)
 }
 
+// DestroySessionHandler deletes a session
+func (h *Handler) DestroySessionHandler(w http.ResponseWriter, r *http.Request) {
+	c := http.Cookie{
+		Name:     "user_id",
+		Value:    "deleted",
+		Expires:  time.Now(),
+		HttpOnly: true,
+		MaxAge:   -1,
+		Path:     "/",
+	}
+	http.SetCookie(w, &c)
+
+	// Redirect to root
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
 // OAuthHandshakeHandler is an intermediary step between OAuth and the Server
 func (h *Handler) OAuthHandshakeHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse params
@@ -39,7 +55,7 @@ func (h *Handler) OAuthHandshakeHandler(w http.ResponseWriter, r *http.Request) 
 	params.Add("client_id", h.Secrets["clientID"])
 	params.Add("client_secret", h.Secrets["clientSecret"])
 	params.Add("code", code)
-	params.Add("redirect_uri", "http://localhost:9000/session/create")
+	params.Add("redirect_uri", "http://localhost:9000/session/")
 	params.Add("state", state)
 	u.RawQuery = params.Encode()
 
@@ -74,7 +90,7 @@ func (h *Handler) OAuthHandshakeHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Set cookie
-	hashedToken, err := h.Store.DigestToken(token, h.Secrets["saltSecret"])
+	hashedToken, err := h.Store.DigestToken(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -90,21 +106,5 @@ func (h *Handler) OAuthHandshakeHandler(w http.ResponseWriter, r *http.Request) 
 	http.SetCookie(w, &c)
 
 	// Redirect to landing page
-	http.Redirect(w, r, "/", http.StatusFound)
-}
-
-// CreateSessionHandler creates the authentication token
-func (h *Handler) CreateSessionHandler(w http.ResponseWriter, r *http.Request) {
-	value := "bacon"
-	c := http.Cookie{
-		Name:     "thing1",
-		Value:    value,
-		Expires:  time.Now().Add(time.Hour),
-		HttpOnly: true,
-		MaxAge:   360000,
-		Path:     "/",
-	}
-	http.SetCookie(w, &c)
-
 	http.Redirect(w, r, "/", http.StatusFound)
 }

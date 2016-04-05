@@ -49,14 +49,18 @@ func (s *Store) Close() error {
 // CreateUser creates a user for a given token
 func (s *Store) CreateUser(token, salt string) error {
 	// Hash and salt the user's token
-	hash, err := s.DigestToken(token, salt)
+	hash, err := s.DigestToken(token)
+	if err != nil {
+		return err
+	}
+	saltedHash, err := s.DigestToken(hash + salt)
 	if err != nil {
 		return err
 	}
 
 	// Create or Overwrite user
 	if err := s.DB.Update(func(tx *bolt.Tx) error {
-		tx.Bucket([]byte("users")).Put([]byte(hash), []byte(token))
+		tx.Bucket([]byte("users")).Put([]byte(saltedHash), []byte(token))
 		return nil
 	}); err != nil {
 		return err
@@ -66,19 +70,23 @@ func (s *Store) CreateUser(token, salt string) error {
 }
 
 // User retrieves a user from the key/value store
-func (s *Store) User(hash string) string {
+func (s *Store) User(hash, salt string) (string, error) {
 	var token string
+	saltedHash, err := s.DigestToken(hash + salt)
+	if err != nil {
+		return "", err
+	}
 	s.DB.View(func(tx *bolt.Tx) error {
-		token = string(tx.Bucket([]byte("users")).Get([]byte(hash)))
+		token = string(tx.Bucket([]byte("users")).Get([]byte(saltedHash)))
 		return nil
 	})
-	return token
+	return token, nil
 }
 
 // DigestToken hashes and salts a given token
-func (s *Store) DigestToken(token, salt string) (string, error) {
+func (s *Store) DigestToken(value string) (string, error) {
 	hashAlgo := sha256.New()
-	if _, err := hashAlgo.Write([]byte(token + salt)); err != nil {
+	if _, err := hashAlgo.Write([]byte(value)); err != nil {
 		return "", err
 	}
 	hash := hashAlgo.Sum(nil)

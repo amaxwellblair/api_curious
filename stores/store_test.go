@@ -15,12 +15,14 @@ func TestStore_CreateUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hash, err := s.DigestToken("blah blah blah", "chick")
+	hash, err := s.DigestToken("blah blah blah")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if user := s.User(hash); user != "blah blah blah" {
+	if user, err := s.User(hash, "chick"); err != nil {
+		t.Fatal(err)
+	} else if user != "blah blah blah" {
 		t.Fatalf("unexpected user: %s", user)
 	}
 }
