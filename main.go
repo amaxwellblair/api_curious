@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	r := handler.NewRouter()
+	h := handler.NewHandler(secrets())
+	r := h.NewRouter()
 	// h := handler.NewHandler()
 	http.ListenAndServe(":9000", r)
 }
