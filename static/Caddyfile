@@ -1,0 +1,4 @@
+localhost {
+  gzip
+  ext .html .pdf .md
+}

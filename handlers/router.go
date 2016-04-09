@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"text/template"
 
+	"github.com/amaxwellblair/api_curious/clients"
 	"github.com/amaxwellblair/api_curious/stores"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -13,6 +14,7 @@ import (
 type Handler struct {
 	Secrets   map[string]string
 	Store     *store.Store
+	Client    *client.Client
 	templates *template.Template
 }
 
@@ -22,9 +24,11 @@ func NewHandler(secrets map[string]string) *Handler {
 	if err := s.Open(); err != nil {
 		panic(err)
 	}
+	c := client.NewClient("api.github.com")
 	return &Handler{
 		Secrets:   secrets,
 		Store:     s,
+		Client:    c,
 		templates: Templates(),
 	}
 }
@@ -40,8 +44,18 @@ func (h *Handler) NewRouter() http.Handler {
 		Methods("DELETE")
 	r.HandleFunc("/session/handshake", h.OAuthHandshakeHandler).
 		Methods("GET")
+	r.HandleFunc("/github/user", h.UserGithubAPI).
+		Methods("GET")
+	r.HandleFunc("/github/user/gists", h.GistGithubAPI).
+		Methods("GET")
 
-	return handlers.HTTPMethodOverrideHandler(r)
+	handler := handlers.HTTPMethodOverrideHandler(r)
+
+	o := handlers.AllowedOrigins([]string{"*"})
+
+	handler = handlers.CORS(o)(r)
+
+	return handler
 }
 
 // User holds a token and existence
@@ -61,7 +75,12 @@ func (h *Handler) CurrentUser(r *http.Request) *User {
 	if err != nil {
 		return h.NewUser(false, "")
 	}
-	return h.NewUser(true, c.Value)
+	token, err := h.Store.User(c.Value, h.Secrets["saltSecret"])
+	if err != nil {
+		return h.NewUser(false, "")
+	}
+
+	return h.NewUser(true, token)
 }
 
 // Templates returns the parsed templates for all views

@@ -18,6 +18,7 @@ func (h *Handler) NewSessionHandler(w http.ResponseWriter, r *http.Request) {
 	params.Add("client_id", h.Secrets["clientID"])
 	params.Add("redirect_uri", "http://localhost:9000/session/handshake")
 	params.Add("state", "testing 123")
+	params.Add("scope", "gist")
 	u.RawQuery = params.Encode()
 
 	// Redirect to github OAuth
@@ -95,16 +96,16 @@ func (h *Handler) OAuthHandshakeHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	c := http.Cookie{
-		Name:     "user_id",
-		Value:    hashedToken,
-		Expires:  time.Now().Add(time.Hour),
-		HttpOnly: true,
-		MaxAge:   360000,
-		Path:     "/",
-	}
-	http.SetCookie(w, &c)
+
+	// Build URL
+	u = new(url.URL)
+	u.Scheme = "http"
+	u.Host = "localhost:2015"
+	u.Path = "/"
+	params = u.Query()
+	params.Add("user_id", hashedToken)
+	u.RawQuery = params.Encode()
 
 	// Redirect to landing page
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, u.String(), http.StatusFound)
 }
